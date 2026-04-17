@@ -2,9 +2,13 @@ import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
-export default defineConfig({
-  plugins: [tailwindcss(), reactRouter()],
+export default defineConfig(({ mode }) => ({
+  plugins: mode === "test" ? [] : [tailwindcss(), reactRouter()],
   resolve: {
     tsconfigPaths: true,
   },
-});
+  test: {
+    environment: "node",
+    globals: true,
+  },
+}));
