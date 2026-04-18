@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "miniflux",
+  // Set this to today's date
+  "compatibility_date": "2026-04-17",
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "directory": "build"
+  }
+}
