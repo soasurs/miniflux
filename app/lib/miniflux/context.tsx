@@ -13,6 +13,7 @@ interface StoredCredentials {
 
 interface MinifluxContextValue {
   client: MinifluxClient | null
+  ready: boolean
   setClient: (client: MinifluxClient) => void
   clearClient: () => void
 }
@@ -43,9 +44,11 @@ function loadCredentials(): MinifluxClient | null {
 
 export function MinifluxProvider({ children }: { children: ReactNode }) {
   const [client, setClientState] = useState<MinifluxClient | null>(null)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     setClientState(loadCredentials())
+    setReady(true)
   }, [])
 
   function setClient(client: MinifluxClient) {
@@ -59,7 +62,7 @@ export function MinifluxProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <MinifluxContext.Provider value={{ client, setClient, clearClient }}>
+    <MinifluxContext.Provider value={{ client, ready, setClient, clearClient }}>
       {children}
     </MinifluxContext.Provider>
   )

@@ -413,7 +413,7 @@ interface Enclosure {
   media_progression: number
 }
 
-interface Entry {
+export interface Entry {
   id: number
   user_id: number
   feed_id: number
