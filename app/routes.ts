@@ -5,5 +5,6 @@ export default [
   route("bookmarks", "pages/bookmarks/bookmarks.tsx"),
   route("entry/:entryId", "pages/entry/entry.tsx"),
   route("history", "pages/history/history.tsx"),
+  route("feeds", "pages/feeds/feeds.tsx"),
   route("login", "pages/login/login.tsx")
 ] satisfies RouteConfig;

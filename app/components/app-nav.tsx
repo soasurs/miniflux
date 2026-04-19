@@ -33,6 +33,14 @@ function AppNav({ containerClassName }: { containerClassName?: string }) {
         >
           Bookmarks
         </NavLink>
+        <NavLink
+          to="/feeds"
+          className={({ isActive }) =>
+            cn(navLinkClassName, isActive && "bg-foreground text-background hover:bg-foreground hover:text-background")
+          }
+        >
+          Feeds
+        </NavLink>
       </div>
     </nav>
   )

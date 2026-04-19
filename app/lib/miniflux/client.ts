@@ -364,7 +364,7 @@ type Result<T> =
 
 type EntryStatus = "read" | "unread" | "removed"
 
-interface Feed {
+export interface Feed {
   id: number
   user_id: number
   title: string
@@ -397,7 +397,7 @@ interface Feed {
   } | null
 }
 
-interface FeedIcon {
+export interface FeedIcon {
   id: number
   data: string
   mime_type: string
@@ -491,7 +491,7 @@ interface Subscription {
   type: string
 }
 
-interface Counters {
+export interface Counters {
   reads: Record<string, number>
   unreads: Record<string, number>
 }
