@@ -458,7 +458,7 @@ interface EntryFilter {
   globally_visible?: boolean
 }
 
-interface Category {
+export interface Category {
   id: number
   user_id: number
   title: string
@@ -549,7 +549,7 @@ interface UpdateFeedRequest {
   fetch_via_proxy?: boolean
 }
 
-interface UpdateEntryRequest {
+export interface UpdateEntryRequest {
   title?: string
   content?: string
 }

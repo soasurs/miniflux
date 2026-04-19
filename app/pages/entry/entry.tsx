@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react"
-import { Link, useLocation, useParams } from "react-router"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useParams } from "react-router"
 import AppNav from "~/components/app-nav"
-import type { EntryLinkState } from "~/components/entry"
 import { Button, buttonVariants } from "~/components/ui/button"
 import { Separator } from "~/components/ui/separator"
 import type { Entry } from "~/lib/miniflux/client"
@@ -17,85 +16,43 @@ function entryBodyClassName() {
 
 function EntryPage() {
   const { entryId } = useParams()
-  const location = useLocation()
-  const parsedEntryId = Number(entryId)
+  const numEntryId = Number(entryId)
   const { client, ready } = useMiniflux()
-  const [entry, setEntry] = useState<Entry | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [pendingAction, setPendingAction] = useState<"status" | "bookmark" | null>(null)
+  const queryClient = useQueryClient()
+  const queryKey = ['feed', entryId]
+  const { status, error, data } = useQuery({
+    queryKey: queryKey,
+    queryFn: async () => {
+      return await client?.getEntry(numEntryId)
+    },
+    enabled: !!client && ready,
+  })
 
-  useEffect(() => {
-    if (!Number.isInteger(parsedEntryId) || parsedEntryId <= 0) {
-      setError("Invalid entry id")
-      setLoading(false)
-      return
-    }
-
-    if (!ready) {
-      return
-    }
-
-    if (!client) {
-      setError(null)
-      setLoading(false)
-      return
-    }
-
-    let cancelled = false
-
-    const fetchEntry = async () => {
-      setLoading(true)
-      setError(null)
-      setActionError(null)
-
-      try {
-        const ret = await client.getEntry(parsedEntryId)
-        if (!ret.ok) {
-          if (!cancelled) {
-            setError(ret.error.error_message)
-            setEntry(null)
-          }
-          return
-        }
-
-        let nextEntry = ret.data
-
-        if (nextEntry.status === "unread") {
-          const markReadRet = await client.updateEntries([nextEntry.id], "read")
-          if (!markReadRet.ok) {
-            if (!cancelled) {
-              setActionError(markReadRet.error.error_message)
-            }
-          } else {
-            nextEntry = { ...nextEntry, status: "read" }
-          }
-        }
-
-        if (!cancelled) {
-          setEntry(nextEntry)
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Retrieve entry failed")
-          setEntry(null)
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+  const toggleReadStatusMutation = useMutation({
+    mutationFn: async (entry: Entry) => {
+      let nextStatus = entry.status
+      if (nextStatus == 'read') {
+        nextStatus = 'unread'
+      } else if (nextStatus == 'unread') {
+        nextStatus = 'read'
       }
+      await client?.updateEntries([entry.id], nextStatus)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKey })
     }
+  })
 
-    fetchEntry()
-
-    return () => {
-      cancelled = true
+  const toggleBookmarkStatusMutation = useMutation({
+    mutationFn: async (entry: Entry) => {
+      await client?.toggleEntryBookmark(entry.id)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKey })
     }
-  }, [client, parsedEntryId, ready])
+  })
 
-  if (!ready || loading) {
+  if (status === 'pending') {
     return (
       <div className="pb-8 md:pb-10">
         <AppNav containerClassName="max-w-4xl" />
@@ -106,28 +63,7 @@ function EntryPage() {
         </div>
       </div>
     )
-  }
-
-  if (!client) {
-    return (
-      <div className="pb-8 md:pb-10">
-        <AppNav containerClassName="max-w-4xl" />
-        <div className="mx-auto max-w-4xl px-4 py-6 md:py-8">
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-            <h1 className="text-xl font-semibold">Sign in to view this entry</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Your Miniflux client is not connected yet.
-            </p>
-            <Link to="/login" className={`${buttonVariants({ variant: "outline" })} mt-4`}>
-              Go to login
-            </Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error || !entry) {
+  } else if (status === 'error') {
     return (
       <div className="pb-8 md:pb-10">
         <AppNav containerClassName="max-w-4xl" />
@@ -135,7 +71,21 @@ function EntryPage() {
           <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
             <h1 className="text-xl font-semibold text-foreground">Unable to load entry</h1>
             <p className="mt-2 text-sm text-destructive">
-              {error ?? "The entry could not be found."}
+              ❌ Failed to fetch entry: {error.message}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  } else if (!data || !data.ok) {
+    return (
+      <div className="pb-8 md:pb-10">
+        <AppNav containerClassName="max-w-4xl" />
+        <div className="mx-auto max-w-4xl px-4 py-6 md:py-8">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
+            <h1 className="text-xl font-semibold text-foreground">Unable to load entry</h1>
+            <p className="mt-2 text-sm text-destructive">
+              ⚠️ Failed to fetch entry: {data?.error.error_message}
             </p>
           </div>
         </div>
@@ -143,54 +93,7 @@ function EntryPage() {
     )
   }
 
-  const currentClient = client
-  const currentEntry = entry
-  const isRead = currentEntry.status === "read"
-  const linkState = location.state as EntryLinkState | null
-  const currentIndex = linkState?.entryIds.indexOf(currentEntry.id) ?? -1
-  const prevEntryId = currentIndex > 0 ? linkState?.entryIds[currentIndex - 1] : null
-  const nextEntryId = currentIndex >= 0 && currentIndex < (linkState?.entryIds.length ?? 0) - 1
-    ? linkState?.entryIds[currentIndex + 1]
-    : null
-
-  async function handleToggleRead() {
-    setPendingAction("status")
-    setActionError(null)
-
-    try {
-      const nextStatus = isRead ? "unread" : "read"
-      const ret = await currentClient.updateEntries([currentEntry.id], nextStatus)
-      if (!ret.ok) {
-        setActionError(ret.error.error_message)
-        return
-      }
-
-      setEntry({ ...currentEntry, status: nextStatus })
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Update entry status failed")
-    } finally {
-      setPendingAction(null)
-    }
-  }
-
-  async function handleToggleBookmark() {
-    setPendingAction("bookmark")
-    setActionError(null)
-
-    try {
-      const ret = await currentClient.toggleEntryBookmark(currentEntry.id)
-      if (!ret.ok) {
-        setActionError(ret.error.error_message)
-        return
-      }
-
-      setEntry({ ...currentEntry, starred: !currentEntry.starred })
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Toggle bookmark failed")
-    } finally {
-      setPendingAction(null)
-    }
-  }
+  const currentEntry = data.data
 
   return (
     <div className="pb-8 md:pb-10">
@@ -214,24 +117,24 @@ function EntryPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-2">
               <Button
-                variant={isRead ? "outline" : "default"}
+                variant={currentEntry.status == 'read' ? "outline" : "default"}
                 size="sm"
-                onClick={handleToggleRead}
-                disabled={pendingAction !== null}
+                onClick={() => toggleReadStatusMutation.mutate(currentEntry)}
+                disabled={toggleReadStatusMutation.status === 'pending'}
               >
-                {pendingAction === "status"
+                {toggleReadStatusMutation.status === 'pending'
                   ? "Updating..."
-                  : isRead
+                  : currentEntry.status == 'read'
                     ? "Mark as unread"
                     : "Mark as read"}
               </Button>
               <Button
                 variant={currentEntry.starred ? "secondary" : "outline"}
                 size="sm"
-                onClick={handleToggleBookmark}
-                disabled={pendingAction !== null}
+                onClick={() => toggleBookmarkStatusMutation.mutate(currentEntry)}
+                disabled={toggleBookmarkStatusMutation.status === 'pending'}
               >
-                {pendingAction === "bookmark"
+                {toggleBookmarkStatusMutation.status === 'pending'
                   ? "Saving..."
                   : currentEntry.starred
                     ? "Remove bookmark"
@@ -256,9 +159,6 @@ function EntryPage() {
                 </a>
               )}
             </div>
-            {actionError && (
-              <p className="text-sm text-destructive">{actionError}</p>
-            )}
           </header>
           <Separator />
           <div className="p-6 md:p-8">
@@ -273,32 +173,6 @@ function EntryPage() {
             )}
           </div>
         </article>
-        {(prevEntryId || nextEntryId) && (
-          <div className="mt-4 flex items-center justify-between gap-3">
-            {prevEntryId ? (
-              <Link
-                to={`/entry/${prevEntryId}`}
-                state={linkState}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                Previous
-              </Link>
-            ) : (
-              <div />
-            )}
-            {nextEntryId ? (
-              <Link
-                to={`/entry/${nextEntryId}`}
-                state={linkState}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                Next
-              </Link>
-            ) : (
-              <div />
-            )}
-          </div>
-        )}
       </div>
     </div>
   )

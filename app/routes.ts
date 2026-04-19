@@ -6,5 +6,6 @@ export default [
   route("entry/:entryId", "pages/entry/entry.tsx"),
   route("history", "pages/history/history.tsx"),
   route("feeds", "pages/feeds/feeds.tsx"),
+  route("categories", "pages/categories/categories.tsx"),
   route("login", "pages/login/login.tsx")
 ] satisfies RouteConfig;

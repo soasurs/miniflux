@@ -34,6 +34,7 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
       return await client!.refreshFeed(props.feed.id)
     },
     onSuccess: async () => {
+      toast.success("Refresh feed successfully", {position: 'top-center'})
       await queryClient.invalidateQueries({ queryKey: ["feeds"] })
     }
   })
@@ -43,6 +44,7 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
       return await client!.removeFeed(props.feed.id)
     },
     onSuccess: async () => {
+      toast.success("Remove feed successfully", {position: 'top-center'})
       await queryClient.invalidateQueries({ queryKey: ["feeds"] })
     }
   })
