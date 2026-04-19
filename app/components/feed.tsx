@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react"
 import { Link } from 'react-router'
-import type { Feed, Counters } from "~/lib/miniflux/client"
+import type { Feed } from "~/lib/miniflux/client"
 import { useMiniflux } from "~/lib/miniflux/context"
 import { Button } from "./ui/button"
+import { FeedIcon } from "./feed-icon"
 import { toast } from "sonner"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 function formatLastCheckedAt(value: string): string {
   const date = new Date(value)
@@ -26,73 +27,31 @@ function formatLastCheckedAt(value: string): string {
 
 function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
   const { client, ready } = useMiniflux()
-  const [icon, setIcon] = useState<string>('')
+  const queryClient = useQueryClient()
 
-  const fetchFeedIcon = async () => {
-    if (!ready) {
-      return
+  const refreshFeedMutation = useMutation({
+    mutationFn: async () => {
+      return await client!.refreshFeed(props.feed.id)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["feeds"] })
     }
+  })
 
-    if (!client) {
-      return
+  const removeFeedMutation = useMutation({
+    mutationFn: async () => {
+      return await client!.removeFeed(props.feed.id)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["feeds"] })
     }
-
-    try {
-      const icon = await client.getFeedIconById(props.feed.id)
-      if (!icon.ok) {
-        toast.error("Error", {
-          description: icon.error.error_message
-        })
-        return
-      }
-      setIcon(icon.data.data)
-    } catch (e) {
-      toast.error("Error", {
-        description: e instanceof Error ? e.message : "Failed to fetch feed's icon"
-      })
-      return
-    }
-  }
-
-  const refreshFeed = async () => {
-    if (!client) {
-      return
-    }
-
-    try {
-      client.refreshFeed(props.feed.id)
-    } catch (e) {
-      toast.error("Error", {
-        description: e instanceof Error ? e.message : "Failed to refresh feed"
-      })
-      return
-    }
-  }
-
-  const removeFeed = async () => {
-    if (!client) {
-      return
-    }
-
-    try {
-      client.removeFeed(props.feed.id)
-    } catch (e) {
-      toast.error("Error", {
-        description: e instanceof Error ? e.message : "Failed to remove feed"
-      })
-      return
-    }
-  }
-
-  useEffect(() => {
-    fetchFeedIcon()
-  }, [client, ready, props.feed.id])
+  })
 
   return (
     <li className="flex flex-col rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-muted/35 gap-2">
       <div className="flex gap-4 items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src={`data:${icon}`} className="w-6 h-6"></img>
+          <FeedIcon feed_id={props.feed.id} />
           <Link to={`/feeds/${props.feed.id}`} className="text-xl font-semibold">{props.feed.title}</Link>
           <span>({props.unreads}/{props.reads})</span>
         </div>
@@ -103,28 +62,48 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
         <p>Last checked: {formatLastCheckedAt(props.feed.checked_at)}</p>
       </div>
       <div className="flex gap-3 items-center">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={refreshFeed}
-        >
-          Refresh
-        </Button>
+        {refreshFeedMutation.status === 'pending' ?
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => { refreshFeedMutation.mutate() }}
+          >
+            Refreshing...
+          </Button>
+          :
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => { refreshFeedMutation.mutate() }}
+          >
+            Refresh
+          </Button>
+        }
         <Button
           type="button"
           variant="outline"
         >
           Edit
         </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={removeFeed}
-        >
-          Remove
-        </Button>
+        {removeFeedMutation.status === 'pending' ?
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => { removeFeedMutation.mutate() }}
+          >
+            Removing
+          </Button>
+          :
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => { removeFeedMutation.mutate() }}
+          >
+            Remove
+          </Button>
+        }
       </div>
-    </li>
+    </li >
   )
 }
 

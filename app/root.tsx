@@ -11,6 +11,9 @@ import type { Route } from "./+types/root";
 import { MinifluxProvider } from "~/lib/miniflux/context";
 import "./app.css";
 import { Toaster } from "./components/ui/sonner";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+const queryClient = new QueryClient()
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -25,7 +28,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
         <ScrollRestoration />
         <Scripts />
-        <Toaster/>
+        <Toaster />
       </body>
     </html>
   );
@@ -33,9 +36,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <MinifluxProvider>
-      <Outlet />
-    </MinifluxProvider>
+    <QueryClientProvider client={queryClient}>
+      <MinifluxProvider>
+        <Outlet />
+      </MinifluxProvider>
+    </QueryClientProvider>
   );
 }
 
