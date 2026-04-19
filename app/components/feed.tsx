@@ -93,7 +93,7 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
       <div className="flex gap-4 items-center justify-between">
         <div className="flex items-center gap-2">
           <img src={`data:${icon}`} className="w-6 h-6"></img>
-          <Link to={`/feeds/${props.feed.id}`} className="text-xl">{props.feed.title}</Link>
+          <Link to={`/feeds/${props.feed.id}`} className="text-xl font-semibold">{props.feed.title}</Link>
           <span>({props.unreads}/{props.reads})</span>
         </div>
         <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground whitespace-nowrap">{props.feed.category.title}</span>
