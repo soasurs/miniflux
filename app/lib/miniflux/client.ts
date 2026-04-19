@@ -438,7 +438,7 @@ interface EntryResultSet {
   entries: Entry[]
 }
 
-interface EntryFilter {
+export interface EntryFilter {
   status?: EntryStatus | EntryStatus[]
   offset?: number
   limit?: number

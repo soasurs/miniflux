@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect, useRef } from "react"
 import { useParams } from "react-router"
 import AppNav from "~/components/app-nav"
 import { Button, buttonVariants } from "~/components/ui/button"
@@ -19,8 +20,10 @@ function EntryPage() {
   const numEntryId = Number(entryId)
   const { client, ready } = useMiniflux()
   const queryClient = useQueryClient()
-  const queryKey = ['feed', entryId]
-  const { status, error, data } = useQuery({
+  const queryKey = [`feeds/${numEntryId}`]
+  const unreadsQueryKey = ['unreads']
+  const bookmarksQueryKey = ['bookmarks']
+  const { status, error, data, isSuccess } = useQuery({
     queryKey: queryKey,
     queryFn: async () => {
       return await client?.getEntry(numEntryId)
@@ -28,18 +31,34 @@ function EntryPage() {
     enabled: !!client && ready,
   })
 
+  const markEntryRead = async () => {
+    if (!data || !data.ok) return
+    if (data.data.status === 'unread') {
+      await client?.updateEntries([numEntryId], 'read')
+    }
+  }
+
+  const isFirstLoad = useRef(false)
+  useEffect(() => {
+    if (isSuccess && data) {
+      if (!isFirstLoad.current) {
+        markEntryRead()
+      }
+    }
+  }, [isSuccess, data])
+
   const toggleReadStatusMutation = useMutation({
     mutationFn: async (entry: Entry) => {
       let nextStatus = entry.status
-      if (nextStatus == 'read') {
+      if (nextStatus === 'read') {
         nextStatus = 'unread'
-      } else if (nextStatus == 'unread') {
+      } else if (nextStatus === 'unread') {
         nextStatus = 'read'
       }
       await client?.updateEntries([entry.id], nextStatus)
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKey })
+      await queryClient.invalidateQueries({ queryKey: [...queryKey, unreadsQueryKey] })
     }
   })
 
@@ -48,7 +67,7 @@ function EntryPage() {
       await client?.toggleEntryBookmark(entry.id)
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKey })
+      await queryClient.invalidateQueries({ queryKey: [...queryKey, bookmarksQueryKey] })
     }
   })
 
@@ -117,14 +136,14 @@ function EntryPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-2">
               <Button
-                variant={currentEntry.status == 'read' ? "outline" : "default"}
+                variant={currentEntry.status === 'read' ? "outline" : "default"}
                 size="sm"
                 onClick={() => toggleReadStatusMutation.mutate(currentEntry)}
                 disabled={toggleReadStatusMutation.status === 'pending'}
               >
                 {toggleReadStatusMutation.status === 'pending'
                   ? "Updating..."
-                  : currentEntry.status == 'read'
+                  : currentEntry.status === 'read'
                     ? "Mark as unread"
                     : "Mark as read"}
               </Button>

@@ -1,17 +1,116 @@
-import EntryListPage from "~/components/entry-list-page"
+import { useInfiniteQuery } from "@tanstack/react-query"
+import AppNav from "~/components/app-nav"
+import type { EntryFilter } from "~/lib/miniflux/client"
+import { useMiniflux } from "~/lib/miniflux/context"
+import { Button, buttonVariants } from "~/components/ui/button"
+import { Link } from "react-router"
+import { Fragment } from "react/jsx-runtime"
+import EntryCard from "~/components/entry"
 
 function History() {
+  const pageSize = 10
+  const queryKey = ['unreads']
+  const { client, ready } = useMiniflux()
+  const {
+    status,
+    error,
+    data,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    isFetching
+  } = useInfiniteQuery({
+    queryKey: queryKey,
+    queryFn: async (pageParam) => {
+      const params: EntryFilter = {
+        status: 'read',
+        limit: pageSize,
+        direction: 'desc',
+        order: 'published_at',
+        offset: pageParam.pageParam,
+      }
+      return await client?.getEntries(params)
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage) return undefined
+      if (!lastPage.ok) return undefined
+
+      const entries = lastPage.data.entries
+      if (!entries || entries.length === 0) return undefined
+
+      return entries.length + pageSize
+    },
+    enabled: !!client && ready
+  })
   return (
-    <EntryListPage
-      title="History"
-      description="Entries you have already finished reading."
-      status="read"
-      listPath="/history"
-      infinite
-      pageSize={20}
-      emptyTitle="No reading history yet"
-      emptyDescription="Marked-as-read entries will show up here."
-    />
+    <div className="pb-8 md:pb-10">
+      <AppNav containerClassName="max-w-4xl" />
+      <main className="mx-auto max-w-4xl px-4 py-6 md:py-8">
+        <header className="mb-6 space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight">History</h1>
+          <p className="text-sm text-muted-foreground">Entries you have already finished reading.</p>
+        </header>
+        {status === 'pending'
+          ? <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+            Loading entries...
+          </div>
+          : !client ? (
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <h2 className="text-lg font-semibold">Sign in to view your entries</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Connect your Miniflux account first, then your feeds will appear here.
+              </p>
+              <Link to="/login" className={`${buttonVariants({ variant: "outline" })} mt-4`}>
+                Go to login
+              </Link>
+            </div>
+          ) : error || !data ? (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-foreground">Unable to load entries</h2>
+              <p className="mt-2 text-sm text-destructive">{error.message}</p>
+            </div>
+          ) : data.pages.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center shadow-sm">
+              <h2 className="text-lg font-semibold">No bookmarks</h2>
+              <p className="mt-2 text-sm text-muted-foreground">Add more entries to bookmark!</p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {data.pages.map((group, i) => (
+                <Fragment key={i}>
+                  {!!group && group.ok &&
+                    <>
+                      {group.data.entries.map((entry) => (
+                        <EntryCard
+                          key={entry.id}
+                          entry={entry}
+                        />
+                      ))}
+                    </>
+                  }
+                </Fragment>
+              ))}
+            </ul>
+          )
+        }
+        <div className="pt-4">
+          <Button
+            type="button"
+            variant='ghost'
+            disabled={!hasNextPage || isFetching}
+            onClick={() => fetchNextPage()}
+          >
+            {isFetchingNextPage
+              ? 'Loading more...'
+              : hasNextPage
+                ? 'Load more'
+                : 'Nothing more to load'
+            }
+          </Button>
+        </div>
+      </main>
+    </div>
   )
 }
 

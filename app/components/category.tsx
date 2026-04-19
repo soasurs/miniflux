@@ -44,7 +44,7 @@ function CategoryCard(props: { category: Category }) {
         >
           Mark all as read
         </a>
-        {props.category.feed_count == 0 &&
+        {props.category.feed_count === 0 &&
           <a
             href='#'
             className="text-red-400 hover:underline"
