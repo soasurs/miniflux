@@ -362,7 +362,7 @@ type Result<T> =
   | { ok: true, data: T }
   | { ok: false, error: ApiError }
 
-type EntryStatus = "read" | "unread" | "removed"
+export type EntryStatus = "read" | "unread" | "removed"
 
 export interface Feed {
   id: number

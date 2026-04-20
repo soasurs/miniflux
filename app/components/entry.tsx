@@ -5,7 +5,7 @@ function formatPublishedAt(value: string) {
   return new Date(value).toLocaleDateString()
 }
 
-function EntryCard(props: { entry: Entry }) {
+function EntryCard(props: { entry: Entry, parent?: string, prevEntryId?: number, nextEntryId?: number }) {
   return (
     <li className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-muted/35">
       <div className="flex items-start justify-between gap-3">
@@ -13,6 +13,11 @@ function EntryCard(props: { entry: Entry }) {
           <Link
             to={`/entry/${props.entry.id}`}
             className="block text-lg font-semibold leading-snug text-foreground hover:text-primary"
+            state={{
+              parent: props.parent,
+              prevEntryId: props.prevEntryId,
+              nextEntryId: props.nextEntryId,
+            }}
           >
             {props.entry.title}
           </Link>

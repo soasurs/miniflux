@@ -1,11 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
-import { useParams } from "react-router"
+import { useLocation, useNavigate, useParams } from "react-router"
+import { toast } from "sonner"
 import AppNav from "~/components/app-nav"
 import { Button, buttonVariants } from "~/components/ui/button"
 import { Separator } from "~/components/ui/separator"
-import type { Entry } from "~/lib/miniflux/client"
+import type { Entry, EntryFilter, EntryStatus } from "~/lib/miniflux/client"
 import { useMiniflux } from "~/lib/miniflux/context"
+
+type EntryFromRouteState = {
+  parent?: "unreads" | "history" | "bookmarks"
+  prevEntryId?: number
+  nextEntryId?: number
+}
 
 function formatPublishedAt(value: string) {
   return new Date(value).toLocaleString()
@@ -23,6 +30,10 @@ function EntryPage() {
   const queryKey = [`feeds/${numEntryId}`]
   const unreadsQueryKey = ['unreads']
   const bookmarksQueryKey = ['bookmarks']
+  const navigate = useNavigate()
+  const location = useLocation()
+  const entryState = location.state as EntryFromRouteState | null
+
   const { status, error, data, isSuccess } = useQuery({
     queryKey: queryKey,
     queryFn: async () => {
@@ -30,6 +41,78 @@ function EntryPage() {
     },
     enabled: !!client && ready,
   })
+
+  const fetchPrevNextEntries = async () => {
+    if (!client) {
+      return
+    }
+    if (!entryState) {
+      return
+    }
+    if (!entryState.parent) {
+      return
+    }
+
+    const prevParams: EntryFilter = {
+      limit: 1,
+      order: 'published_at',
+      direction: 'asc',
+      after_entry_id: numEntryId,
+    }
+    if (entryState.parent === 'unreads') {
+      prevParams.status = 'unread'
+    } else if (entryState.parent === 'history') {
+      prevParams.status = 'read'
+    } else {
+      prevParams.starred = true
+    }
+    const prev = await client.getEntries(prevParams)
+    if (!prev) {
+      throw new Error('failed to fetch previous entry')
+    }
+    if (!prev.ok) {
+      throw new Error("failed to fetch previous entry: " + prev.error.error_message)
+    }
+    const prevEntry = prev.data.entries[0]
+
+    const nextParams: EntryFilter = {
+      limit: 1,
+      order: 'published_at',
+      direction: 'desc',
+      before_entry_id: numEntryId,
+    }
+    if (entryState.parent === 'unreads') {
+      nextParams.status = 'unread'
+    } else if (entryState.parent === 'history') {
+      nextParams.status = 'read'
+    } else {
+      nextParams.starred = true
+    }
+    const next = await client.getEntries(nextParams)
+    if (!next) {
+      throw new Error('failed to fetch next entry')
+    }
+    if (!next.ok) {
+      throw new Error('failed to fetch next entry: ' + next.error.error_message)
+    }
+    const nextEntry = next.data.entries[0]
+
+    return { prev: prevEntry, next: nextEntry }
+  }
+
+  const { status: prevNextStatus, error: prevEntryError, data: prevNextEntry } = useQuery({
+    queryKey: ["entries", entryId, "prevNext", entryState?.parent],
+    queryFn: fetchPrevNextEntries,
+    enabled: !!entryState && entryState.parent && !entryState.prevEntryId && !entryState.nextEntryId,
+  })
+  if (prevEntryError) {
+    toast.error('failed to fetch prev/next entres', {
+      description: prevEntryError.message,
+      position: 'top-center'
+    })
+  }
+
+  console.log(prevNextEntry)
 
   const markEntryRead = async () => {
     if (!data || !data.ok) return
@@ -45,7 +128,7 @@ function EntryPage() {
         markEntryRead()
       }
     }
-  }, [isSuccess, data])
+  }, [isSuccess, data, prevNextEntry])
 
   const toggleReadStatusMutation = useMutation({
     mutationFn: async (entry: Entry) => {
@@ -117,7 +200,7 @@ function EntryPage() {
   return (
     <div className="pb-8 md:pb-10">
       <AppNav containerClassName="max-w-4xl" />
-      <div className="mx-auto max-w-4xl px-4 py-6 md:py-8">
+      <div className="flex flex-col mx-auto max-w-4xl px-4 py-6 md:py-8 gap-4">
         <article className="overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
           <header className="space-y-4 p-6 md:p-8">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -180,7 +263,7 @@ function EntryPage() {
             </div>
           </header>
           <Separator />
-          <div className="p-6 md:p-8">
+          <div className="p-6 pt-0 md:p-8 md:pt-0">
             {currentEntry.content ? (
               <div
                 className={entryBodyClassName()}
@@ -192,6 +275,36 @@ function EntryPage() {
             )}
           </div>
         </article>
+        {entryState &&
+          <div className="flex justify-between items-center">
+            {entryState.prevEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.prev && prevNextEntry.prev.id) ?
+              (<Button
+                type='button'
+                variant='default'
+                className='py-4'
+                onClick={() => navigate(`/entry/${entryState.prevEntryId || prevNextEntry?.prev.id}`, {
+                  state: {
+                    parent: entryState.parent,
+                  }
+                })}>
+                Previous
+              </Button>) :
+              (<div className="w-24" />)
+            }
+            {(entryState.nextEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.next && prevNextEntry.next.id)) &&
+              (<Button
+                type='button'
+                variant='default'
+                className='py-4 ml-auto'
+                onClick={() => navigate(`/entry/${entryState.nextEntryId || prevNextEntry?.next.id}`, {
+                  state: {
+                    parent: entryState.parent,
+                  }
+                })}>
+                Next
+              </Button>)}
+          </div>
+        }
       </div>
     </div>
   )

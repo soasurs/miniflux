@@ -6,9 +6,10 @@ import { useMiniflux } from "~/lib/miniflux/context"
 import EntryCard from "~/components/entry"
 import { Fragment } from "react/jsx-runtime"
 import type { EntryFilter } from "~/lib/miniflux/client"
+import { useEffect, useMemo, useRef } from "react"
 
 function Bookmarks() {
-  const pageSize = 10;
+  const pageSize = 20;
   const queryKey = ['bookmarks']
   const { client, ready } = useMiniflux()
   const {
@@ -39,13 +40,42 @@ function Bookmarks() {
       if (!lastPage.ok) return undefined
 
       const entries = lastPage.data.entries
-      if (!entries || entries.length === 0 ) return undefined
+      if (!entries || entries.length === 0) return undefined
       if (entries.length < pageSize) return undefined
 
       return entries[entries.length - 1].id
     },
     enabled: !!client && ready,
   })
+
+  const allEntries = useMemo(() => {
+    return data?.pages
+      .filter((page): page is NonNullable<typeof page> => !!page)
+      .filter(page => page.ok)
+      .flatMap(page => page.data.entries)
+  }, [data?.pages])
+
+
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    }, {
+      threshold: 0.1,
+      rootMargin: '150px 0px',
+    }
+    )
+
+    const currentRef = loadMoreRef.current
+    if (currentRef) observer.observe(currentRef)
+
+    return () => {
+      if (currentRef) observer.unobserve(currentRef)
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return (
     <div className="pb-8 md:pb-10">
@@ -85,12 +115,28 @@ function Bookmarks() {
                 <Fragment key={i}>
                   {!!group && group.ok &&
                     <>
-                      {group.data.entries.map((entry) => (
-                        <EntryCard
+                      {group.data.entries.map((entry) => {
+                        const currentIndex = allEntries?.findIndex(e => e.id === entry.id)
+                        const prevEntryId = () => {
+                          if (!allEntries || currentIndex! - 1 < 0) {
+                            return undefined
+                          }
+                          return allEntries[currentIndex! - 1].id
+                        }
+                        const nextEntryId = () => {
+                          if (!allEntries || currentIndex! + 1 >= allEntries.length) {
+                            return undefined
+                          }
+                          return allEntries[currentIndex! + 1].id
+                        }
+                        return <EntryCard
                           key={entry.id}
                           entry={entry}
+                          parent="bookmarks"
+                          prevEntryId={prevEntryId()}
+                          nextEntryId={nextEntryId()}
                         />
-                      ))}
+                      })}
                     </>
                   }
                 </Fragment>
@@ -98,20 +144,19 @@ function Bookmarks() {
             </ul>
           )
         }
-        <div className="pt-4">
-          <Button
-            type="button"
-            variant='ghost'
-            disabled={!hasNextPage || isFetching}
-            onClick={() => fetchNextPage()}
-          >
-            {isFetchingNextPage
-              ? 'Loading more...'
-              : hasNextPage
-                ? 'Load more'
-                : 'Nothing more to load'
+        <div className="pt-4 space-y-2">
+          <div ref={loadMoreRef} className="h-1">
+            {isFetchingNextPage &&
+              <div className="text-center text-sm text-muted-foreground animate-pulse">
+                Loading more...
+              </div>
             }
-          </Button>
+            {!hasNextPage &&
+              <div className="text-center text-sm text-muted-foreground">
+                Nothing more to load
+              </div>
+            }
+          </div>
         </div>
       </main>
     </div>

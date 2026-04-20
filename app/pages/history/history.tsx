@@ -6,9 +6,10 @@ import { Button, buttonVariants } from "~/components/ui/button"
 import { Link } from "react-router"
 import { Fragment } from "react/jsx-runtime"
 import EntryCard from "~/components/entry"
+import { useEffect, useMemo, useRef } from "react"
 
 function History() {
-  const pageSize = 10
+  const pageSize = 20
   const queryKey = ['unreads']
   const { client, ready } = useMiniflux()
   const {
@@ -21,13 +22,13 @@ function History() {
     isFetching
   } = useInfiniteQuery({
     queryKey: queryKey,
-    queryFn: async (pageParam) => {
+    queryFn: async ({ pageParam }) => {
       const params: EntryFilter = {
         status: 'read',
         limit: pageSize,
         direction: 'desc',
         order: 'published_at',
-        offset: pageParam.pageParam,
+        offset: pageParam,
       }
       return await client?.getEntries(params)
     },
@@ -43,6 +44,32 @@ function History() {
     },
     enabled: !!client && ready
   })
+
+  const allEntries = useMemo(() => {
+    return data?.pages
+      .filter((page): page is NonNullable<typeof page> => !!page)
+      .filter(page => page.ok)
+      .flatMap(page => page.data.entries)
+  }, [data?.pages])
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    }, {
+      threshold: 0.1,
+      rootMargin: '150px 0px',
+    }
+    )
+
+    const currentRef = loadMoreRef.current
+    if (currentRef) observer.observe(currentRef)
+
+    return () => { if (currentRef) observer.unobserve(currentRef) }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
   return (
     <div className="pb-8 md:pb-10">
       <AppNav containerClassName="max-w-4xl" />
@@ -81,12 +108,28 @@ function History() {
                 <Fragment key={i}>
                   {!!group && group.ok &&
                     <>
-                      {group.data.entries.map((entry) => (
-                        <EntryCard
+                      {group.data.entries.map((entry) => {
+                        const currentIndex = allEntries?.findIndex(e => e.id === entry.id)
+                        const prevEntryId = () => {
+                          if (!allEntries || currentIndex! - 1 < 0) {
+                            return undefined
+                          }
+                          return allEntries[currentIndex! - 1].id
+                        }
+                        const nextEntryId = () => {
+                          if (!allEntries || currentIndex! + 1 >= allEntries.length) {
+                            return undefined
+                          }
+                          return allEntries[currentIndex! + 1].id
+                        }
+                        return <EntryCard
                           key={entry.id}
                           entry={entry}
+                          parent="history"
+                          prevEntryId={prevEntryId()}
+                          nextEntryId={nextEntryId()}
                         />
-                      ))}
+                      })}
                     </>
                   }
                 </Fragment>
@@ -94,20 +137,19 @@ function History() {
             </ul>
           )
         }
-        <div className="pt-4">
-          <Button
-            type="button"
-            variant='ghost'
-            disabled={!hasNextPage || isFetching}
-            onClick={() => fetchNextPage()}
-          >
-            {isFetchingNextPage
-              ? 'Loading more...'
-              : hasNextPage
-                ? 'Load more'
-                : 'Nothing more to load'
+        <div className="pt-4 space-y-2">
+          <div ref={loadMoreRef} className="h-1">
+            {isFetchingNextPage &&
+              <div className="text-center text-sm text-muted-foreground animate-pulse">
+                Loading more...
+              </div>
             }
-          </Button>
+            {!hasNextPage &&
+              <div className="text-center text-sm text-muted-foreground">
+                Nothing more to load
+              </div>
+            }
+          </div>
         </div>
       </main>
     </div>
