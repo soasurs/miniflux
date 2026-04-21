@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { BookmarkCheck, BookmarkOff, BookOpenIcon, MailCheck, MailCheckIcon, MailOpenIcon } from "lucide-react"
+import { ArrowLeft, ArrowRight, BookmarkCheck, BookmarkOff, MailCheckIcon, MailOpenIcon } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useLocation, useNavigate, useParams } from "react-router"
 import { toast } from "sonner"
@@ -34,14 +34,6 @@ function EntryPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const entryState = location.state as EntryFromRouteState | null
-
-  const { status, error, data, isSuccess } = useQuery({
-    queryKey: queryKey,
-    queryFn: async () => {
-      return await client?.getEntry(numEntryId)
-    },
-    enabled: !!client && ready,
-  })
 
   const fetchPrevNextEntries = async () => {
     if (!client) {
@@ -107,18 +99,26 @@ function EntryPage() {
     enabled: !!entryState && entryState.parent && !entryState.prevEntryId && !entryState.nextEntryId,
   })
 
+  const { status, error, data, isSuccess } = useQuery({
+    queryKey: queryKey,
+    queryFn: async () => {
+      return await client?.getEntry(numEntryId)
+    },
+    enabled: !!client && ready,
+  })
+
   const markEntryRead = async () => {
     if (!data || !data.ok) return
     if (data.data.status === 'unread') {
       await client?.updateEntries([numEntryId], 'read')
-      await queryClient.invalidateQueries({queryKey: queryKey})
+      await queryClient.invalidateQueries({ queryKey: queryKey })
     }
   }
 
   useEffect(() => {
     if (isSuccess && data && data.ok && data.data.status === 'unread') {
-        markEntryRead()
-      }
+      markEntryRead()
+    }
   }, [isSuccess, numEntryId])
 
   useEffect(() => {
@@ -205,7 +205,7 @@ function EntryPage() {
       <AppNav containerClassName="max-w-4xl" />
       <div className="flex flex-col mx-auto max-w-4xl px-4 py-6 md:py-8 gap-4">
         <article className="overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
-          <header className="space-y-4 p-6 md:p-8">
+          <header className="space-y-4 p-6 pb-3 md:p-8 md:pb-4">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span className="rounded-full bg-muted px-2 py-1">{currentEntry.feed.category.title}</span>
               <span className="rounded-full bg-muted px-2 py-1">{currentEntry.feed.title}</span>
@@ -264,9 +264,41 @@ function EntryPage() {
                 </a>
               )}
             </div>
+            <>
+              {entryState &&
+                <div className="flex justify-between items-center">
+                  {entryState.prevEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.prev && prevNextEntry.prev.id) ?
+                    (<Button
+                      type='button'
+                      variant='ghost'
+                      className='py-4'
+                      onClick={() => navigate(`/entry/${entryState.prevEntryId || prevNextEntry?.prev.id}`, {
+                        state: {
+                          parent: entryState.parent,
+                        }
+                      })}>
+                      <ArrowLeft /> Previous
+                    </Button>) :
+                    (<div className="w-24" />)
+                  }
+                  {(entryState.nextEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.next && prevNextEntry.next.id)) &&
+                    (<Button
+                      type='button'
+                      variant='ghost'
+                      className='py-4 ml-auto'
+                      onClick={() => navigate(`/entry/${entryState.nextEntryId || prevNextEntry?.next.id}`, {
+                        state: {
+                          parent: entryState.parent,
+                        }
+                      })}>
+                      Next <ArrowRight />
+                    </Button>)}
+                </div>
+              }
+            </>
           </header>
           <Separator />
-          <div className="p-6 pt-0 md:p-8 md:pt-0">
+          <div className="p-6 pb-3 md:p-8 md:pb-4">
             {currentEntry.content ? (
               <div
                 className={entryBodyClassName()}
@@ -277,37 +309,37 @@ function EntryPage() {
               <p className="text-muted-foreground">This entry does not contain readable content.</p>
             )}
           </div>
+          {entryState &&
+            <div className="flex justify-between items-center px-6 pb-3 md:px-8 md:pb-4">
+              {entryState.prevEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.prev && prevNextEntry.prev.id) ?
+                (<Button
+                  type='button'
+                  variant='ghost'
+                  className='py-4'
+                  onClick={() => navigate(`/entry/${entryState.prevEntryId || prevNextEntry?.prev.id}`, {
+                    state: {
+                      parent: entryState.parent,
+                    }
+                  })}>
+                  <ArrowLeft /> Previous
+                </Button>) :
+                (<div className="w-24" />)
+              }
+              {(entryState.nextEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.next && prevNextEntry.next.id)) &&
+                (<Button
+                  type='button'
+                  variant='ghost'
+                  className='py-4 ml-auto'
+                  onClick={() => navigate(`/entry/${entryState.nextEntryId || prevNextEntry?.next.id}`, {
+                    state: {
+                      parent: entryState.parent,
+                    }
+                  })}>
+                  Next <ArrowRight/>
+                </Button>)}
+            </div>
+          }
         </article>
-        {entryState &&
-          <div className="flex justify-between items-center">
-            {entryState.prevEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.prev && prevNextEntry.prev.id) ?
-              (<Button
-                type='button'
-                variant='default'
-                className='py-4'
-                onClick={() => navigate(`/entry/${entryState.prevEntryId || prevNextEntry?.prev.id}`, {
-                  state: {
-                    parent: entryState.parent,
-                  }
-                })}>
-                Previous
-              </Button>) :
-              (<div className="w-24" />)
-            }
-            {(entryState.nextEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.next && prevNextEntry.next.id)) &&
-              (<Button
-                type='button'
-                variant='default'
-                className='py-4 ml-auto'
-                onClick={() => navigate(`/entry/${entryState.nextEntryId || prevNextEntry?.next.id}`, {
-                  state: {
-                    parent: entryState.parent,
-                  }
-                })}>
-                Next
-              </Button>)}
-          </div>
-        }
       </div>
     </div>
   )

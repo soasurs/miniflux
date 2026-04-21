@@ -126,7 +126,7 @@ export function Home() {
                         return <EntryCard
                           key={entry.id}
                           entry={entry}
-                          parent="history"
+                          parent="unreads"
                           prevEntryId={prevEntryId()}
                           nextEntryId={nextEntryId()}
                         />
