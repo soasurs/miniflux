@@ -125,7 +125,7 @@ function EntryPage() {
     if (prevEntryError) {
       toast.error('failed to fetch prev/next entres', {
         description: prevEntryError.message,
-        position: 'top-center'
+        position: 'top-right'
       })
     }
   }, [prevEntryError])
@@ -283,6 +283,7 @@ function EntryPage() {
                       type='button'
                       variant='ghost'
                       className='py-4'
+                      disabled
                     >
                       <ArrowLeft /> Previous
                     </Button>)
@@ -303,6 +304,7 @@ function EntryPage() {
                       type='button'
                       variant='ghost'
                       className='py-4 ml-auto'
+                      disabled
                     >
                       Next <ArrowRight />
                     </Button>)
@@ -341,6 +343,7 @@ function EntryPage() {
                   type='button'
                   variant='ghost'
                   className='py-4'
+                  disabled
                 >
                   <ArrowLeft /> Previous
                 </Button>)
@@ -362,6 +365,7 @@ function EntryPage() {
                   type='button'
                   variant='ghost'
                   className='py-4 ml-auto'
+                  disabled
                 >
                   Next <ArrowRight />
                 </Button>)

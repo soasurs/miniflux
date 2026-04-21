@@ -36,7 +36,7 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
       return await client!.refreshFeed(props.feed.id)
     },
     onSuccess: async () => {
-      toast.success("Refresh feed successfully", { position: 'top-center' })
+      toast.success("Refresh feed successfully", { position: 'top-right' })
       await queryClient.invalidateQueries({ queryKey: ["feeds"] })
     }
   })
@@ -46,7 +46,7 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
       return await client!.removeFeed(props.feed.id)
     },
     onSuccess: async () => {
-      toast.success("Remove feed successfully", { position: 'top-center' })
+      toast.success("Remove feed successfully", { position: 'top-right' })
       await queryClient.invalidateQueries({ queryKey: ["feeds"] })
     }
   })
@@ -56,7 +56,7 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
       <div className="flex gap-4 items-center justify-between">
         <div className="flex items-center gap-2">
           <FeedIcon feed_id={props.feed.id} />
-          <Link to={`/feeds/${props.feed.id}`} className="text-xl font-semibold">{props.feed.title}</Link>
+          <Link to={`/feeds/${props.feed.id}/entries`} className="text-xl font-semibold">{props.feed.title}</Link>
           <span>({props.unreads}/{props.reads})</span>
         </div>
         <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground whitespace-nowrap">{props.feed.category.title}</span>
