@@ -19,7 +19,6 @@ function History() {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-    isFetching
   } = useInfiniteQuery({
     queryKey: queryKey,
     queryFn: async ({ pageParam }) => {
@@ -61,8 +60,7 @@ function History() {
     }, {
       threshold: 0.1,
       rootMargin: '150px 0px',
-    }
-    )
+    })
 
     const currentRef = loadMoreRef.current
     if (currentRef) observer.observe(currentRef)

@@ -1,10 +1,11 @@
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import type { Feed } from "~/lib/miniflux/client"
 import { useMiniflux } from "~/lib/miniflux/context"
 import { Button } from "./ui/button"
 import { FeedIcon } from "./feed-icon"
 import { toast } from "sonner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { DeleteIcon, EditIcon, RefreshCwIcon } from 'lucide-react'
 
 function formatLastCheckedAt(value: string): string {
   const date = new Date(value)
@@ -28,13 +29,14 @@ function formatLastCheckedAt(value: string): string {
 function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
   const { client, ready } = useMiniflux()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const refreshFeedMutation = useMutation({
     mutationFn: async () => {
       return await client!.refreshFeed(props.feed.id)
     },
     onSuccess: async () => {
-      toast.success("Refresh feed successfully", {position: 'top-center'})
+      toast.success("Refresh feed successfully", { position: 'top-center' })
       await queryClient.invalidateQueries({ queryKey: ["feeds"] })
     }
   })
@@ -44,7 +46,7 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
       return await client!.removeFeed(props.feed.id)
     },
     onSuccess: async () => {
-      toast.success("Remove feed successfully", {position: 'top-center'})
+      toast.success("Remove feed successfully", { position: 'top-center' })
       await queryClient.invalidateQueries({ queryKey: ["feeds"] })
     }
   })
@@ -78,14 +80,21 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
             variant="outline"
             onClick={() => { refreshFeedMutation.mutate() }}
           >
-            Refresh
+            <RefreshCwIcon />Refresh
           </Button>
         }
         <Button
           type="button"
           variant="outline"
+          onClick={() => {
+            navigate(`/feeds/${props.feed.id}`, {
+              state: {
+                feed: props.feed
+              }
+            })
+          }}
         >
-          Edit
+          <EditIcon />Edit
         </Button>
         {removeFeedMutation.status === 'pending' ?
           <Button
@@ -101,7 +110,7 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
             variant="destructive"
             onClick={() => { removeFeedMutation.mutate() }}
           >
-            Remove
+            <DeleteIcon />Remove
           </Button>
         }
       </div>

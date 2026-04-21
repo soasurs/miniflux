@@ -1,16 +1,20 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import { useEffect, useState, type JSX } from "react";
 import { toast } from "sonner";
 import AppNav from "~/components/app-nav";
 import FeedCard from "~/components/feed";
+import { Button } from "~/components/ui/button";
 import { type Counters, type Feed } from "~/lib/miniflux/client";
 import { useMiniflux } from "~/lib/miniflux/context";
 
 function Feeds() {
+  const queryKey = ["feeds"]
   const { client, ready } = useMiniflux()
+  const queryClient = useQueryClient()
 
   const { status: feedsStatus, error: feedsError, data: feeds } = useQuery({
-    queryKey: ["feeds"],
+    queryKey: queryKey,
     queryFn: async () => {
       if (!client) {
         throw new Error("Client not ready")
@@ -29,6 +33,15 @@ function Feeds() {
       return await client.getCounters()
     },
     enabled: !!client && ready
+  })
+
+  const refreshAllFeedsMutation = useMutation({
+    mutationFn: async () => {
+      await client?.refreshAllFeeds()
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKey })
+    }
   })
 
   let content: JSX.Element
@@ -59,6 +72,19 @@ function Feeds() {
         <header className="mb-6 space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Feeds</h1>
           <p className="text-sm text-muted-foreground">Manage your feeds</p>
+          <div className="flex gap-2">
+            <Button type="button" variant='outline'>
+              <PlusIcon data-icon="inline-start" />Add feed
+            </Button>
+            <Button type="button" variant='outline' onClick={() => refreshAllFeedsMutation.mutate()}>
+              {refreshAllFeedsMutation.status === 'pending' ?
+                "Refreshing..."
+                :
+                <><RefreshCwIcon data-icon="inline-start" />Refresh all feeds in the background</>
+              }
+
+            </Button>
+          </div>
         </header>
         {content}
       </main>

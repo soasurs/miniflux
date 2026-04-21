@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { BookmarkCheck, BookmarkOff, BookOpenIcon, MailCheck, MailCheckIcon, MailOpenIcon } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useLocation, useNavigate, useParams } from "react-router"
 import { toast } from "sonner"
@@ -105,30 +106,29 @@ function EntryPage() {
     queryFn: fetchPrevNextEntries,
     enabled: !!entryState && entryState.parent && !entryState.prevEntryId && !entryState.nextEntryId,
   })
-  if (prevEntryError) {
-    toast.error('failed to fetch prev/next entres', {
-      description: prevEntryError.message,
-      position: 'top-center'
-    })
-  }
-
-  console.log(prevNextEntry)
 
   const markEntryRead = async () => {
     if (!data || !data.ok) return
     if (data.data.status === 'unread') {
       await client?.updateEntries([numEntryId], 'read')
+      await queryClient.invalidateQueries({queryKey: queryKey})
     }
   }
 
-  const isFirstLoad = useRef(false)
   useEffect(() => {
-    if (isSuccess && data) {
-      if (!isFirstLoad.current) {
+    if (isSuccess && data && data.ok && data.data.status === 'unread') {
         markEntryRead()
       }
+  }, [isSuccess, numEntryId])
+
+  useEffect(() => {
+    if (prevEntryError) {
+      toast.error('failed to fetch prev/next entres', {
+        description: prevEntryError.message,
+        position: 'top-center'
+      })
     }
-  }, [isSuccess, data, prevNextEntry])
+  }, [prevEntryError])
 
   const toggleReadStatusMutation = useMutation({
     mutationFn: async (entry: Entry) => {
@@ -141,16 +141,19 @@ function EntryPage() {
       await client?.updateEntries([entry.id], nextStatus)
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [...queryKey, unreadsQueryKey] })
+      await queryClient.invalidateQueries({ queryKey: unreadsQueryKey })
+      await queryClient.invalidateQueries({ queryKey: queryKey })
     }
   })
 
   const toggleBookmarkStatusMutation = useMutation({
     mutationFn: async (entry: Entry) => {
+      client?.toggleEntryBookmark
       await client?.toggleEntryBookmark(entry.id)
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [...queryKey, bookmarksQueryKey] })
+      await queryClient.invalidateQueries({ queryKey: bookmarksQueryKey })
+      await queryClient.invalidateQueries({ queryKey: queryKey })
     }
   })
 
@@ -227,8 +230,8 @@ function EntryPage() {
                 {toggleReadStatusMutation.status === 'pending'
                   ? "Updating..."
                   : currentEntry.status === 'read'
-                    ? "Mark as unread"
-                    : "Mark as read"}
+                    ? <> <MailCheckIcon /> Mark as unread</>
+                    : <> <MailOpenIcon /> Mark as read</>}
               </Button>
               <Button
                 variant={currentEntry.starred ? "secondary" : "outline"}
@@ -239,8 +242,8 @@ function EntryPage() {
                 {toggleBookmarkStatusMutation.status === 'pending'
                   ? "Saving..."
                   : currentEntry.starred
-                    ? "Remove bookmark"
-                    : "Bookmark"}
+                    ? <><BookmarkOff /> Remove bookmark</>
+                    : <><BookmarkCheck /> Bookmark</>}
               </Button>
               <a
                 href={currentEntry.url}
