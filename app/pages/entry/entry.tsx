@@ -279,9 +279,15 @@ function EntryPage() {
                       })}>
                       <ArrowLeft /> Previous
                     </Button>) :
-                    (<div className="w-24" />)
+                    (<Button
+                      type='button'
+                      variant='ghost'
+                      className='py-4'
+                    >
+                      <ArrowLeft /> Previous
+                    </Button>)
                   }
-                  {(entryState.nextEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.next && prevNextEntry.next.id)) &&
+                  {(entryState.nextEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.next && prevNextEntry.next.id)) ?
                     (<Button
                       type='button'
                       variant='ghost'
@@ -292,7 +298,15 @@ function EntryPage() {
                         }
                       })}>
                       Next <ArrowRight />
-                    </Button>)}
+                    </Button>) :
+                    (<Button
+                      type='button'
+                      variant='ghost'
+                      className='py-4 ml-auto'
+                    >
+                      Next <ArrowRight />
+                    </Button>)
+                  }
                 </div>
               }
             </>
@@ -323,9 +337,15 @@ function EntryPage() {
                   })}>
                   <ArrowLeft /> Previous
                 </Button>) :
-                (<div className="w-24" />)
+                (<Button
+                  type='button'
+                  variant='ghost'
+                  className='py-4'
+                >
+                  <ArrowLeft /> Previous
+                </Button>)
               }
-              {(entryState.nextEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.next && prevNextEntry.next.id)) &&
+              {(entryState.nextEntryId || (prevNextStatus === 'success' && prevNextEntry && prevNextEntry.next && prevNextEntry.next.id)) ?
                 (<Button
                   type='button'
                   variant='ghost'
@@ -334,9 +354,18 @@ function EntryPage() {
                     state: {
                       parent: entryState.parent,
                     }
-                  })}>
-                  Next <ArrowRight/>
-                </Button>)}
+                  })}
+                >
+                  Next <ArrowRight />
+                </Button>) :
+                (<Button
+                  type='button'
+                  variant='ghost'
+                  className='py-4 ml-auto'
+                >
+                  Next <ArrowRight />
+                </Button>)
+              }
             </div>
           }
         </article>
