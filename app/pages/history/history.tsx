@@ -45,10 +45,9 @@ function History() {
   })
 
   const allEntries = useMemo(() => {
-    return data?.pages
-      .filter((page): page is NonNullable<typeof page> => !!page)
-      .filter(page => page.ok)
-      .flatMap(page => page.data.entries)
+    return data?.pages.flatMap(page =>
+      (page && page.ok) ? page.data.entries : []
+    ) ?? [];
   }, [data?.pages])
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
@@ -102,36 +101,15 @@ function History() {
             </div>
           ) : (
             <ul className="flex flex-col gap-3">
-              {data.pages.map((group, i) => (
-                <Fragment key={i}>
-                  {!!group && group.ok &&
-                    <>
-                      {group.data.entries.map((entry) => {
-                        const currentIndex = allEntries?.findIndex(e => e.id === entry.id)
-                        const prevEntryId = () => {
-                          if (!allEntries || currentIndex! - 1 < 0) {
-                            return undefined
-                          }
-                          return allEntries[currentIndex! - 1].id
-                        }
-                        const nextEntryId = () => {
-                          if (!allEntries || currentIndex! + 1 >= allEntries.length) {
-                            return undefined
-                          }
-                          return allEntries[currentIndex! + 1].id
-                        }
-                        return <EntryCard
-                          key={entry.id}
-                          entry={entry}
-                          parent="history"
-                          prevEntryId={prevEntryId()}
-                          nextEntryId={nextEntryId()}
-                        />
-                      })}
-                    </>
-                  }
-                </Fragment>
-              ))}
+              {allEntries?.map((entry, index) => {
+                return <EntryCard
+                  key={entry.id}
+                  entry={entry}
+                  parent="history"
+                  prevEntryId={allEntries[index - 1]?.id}
+                  nextEntryId={allEntries[index + 1]?.id}
+                />
+              })}
             </ul>
           )
         }
