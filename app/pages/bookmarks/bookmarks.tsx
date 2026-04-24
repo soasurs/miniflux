@@ -1,10 +1,9 @@
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { Link } from "react-router"
 import AppNav from "~/components/app-nav"
-import { Button, buttonVariants } from "~/components/ui/button"
+import { buttonVariants } from "~/components/ui/button"
 import { useMiniflux } from "~/lib/miniflux/context"
 import EntryCard from "~/components/entry"
-import { Fragment } from "react/jsx-runtime"
 import type { EntryFilter } from "~/lib/miniflux/client"
 import { useEffect, useMemo, useRef } from "react"
 
@@ -19,7 +18,6 @@ function Bookmarks() {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-    isFetching
   } = useInfiniteQuery({
     queryKey: queryKey,
     queryFn: async (pageParam) => {
@@ -110,15 +108,15 @@ function Bookmarks() {
             </div>
           ) : (
             <ul className="flex flex-col gap-3">
-                      {allEntries.map((entry, index) => {
-                        return <EntryCard
-                          key={entry.id}
-                          entry={entry}
-                          parent="bookmarks"
-                          prevEntryId={allEntries[index - 1]?.id}
-                          nextEntryId={allEntries[index + 1]?.id}
-                        />
-                      })}
+              {allEntries.map((entry, index) => {
+                return <EntryCard
+                  key={entry.id}
+                  entry={entry}
+                  parent="bookmarks"
+                  prevEntryId={allEntries[index - 1]?.id}
+                  nextEntryId={allEntries[index + 1]?.id}
+                />
+              })}
             </ul>
           )
         }

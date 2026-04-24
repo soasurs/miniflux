@@ -11,6 +11,7 @@ import { Input } from "./ui/input"
 import { Checkbox } from "./ui/checkbox"
 import { Button } from "./ui/button"
 import { toast } from "sonner"
+import { Spinner } from "./ui/spinner"
 
 const formSchema = z.object({
   category: z
@@ -63,7 +64,7 @@ function FeedGeneralForm(props: { feed: Feed }) {
         feed_url: value.feed_url,
         disabled: value.do_not_refresh
       })
-      toast.success("Update feed successfully", {position: "top-right"})
+      toast.success("Update feed successfully", { position: "top-right" })
     }
   })
 
@@ -222,9 +223,18 @@ function FeedGeneralForm(props: { feed: Feed }) {
       </CardContent>
       <CardFooter className="flex">
         <Field>
-          <Button type="submit" variant='default' form="general">
-            Update
-          </Button>
+          <form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button type="submit" variant='default' form="general">
+                {isSubmitting
+                  ? <><Spinner data-icon='inline-start' /> Updating...</>
+                  : form.state.isSubmitted
+                    ? "Updated"
+                    : "Update"
+                }
+              </Button>
+            )}
+          </form.Subscribe>
         </Field>
       </CardFooter>
     </Card>

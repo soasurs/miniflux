@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, ArrowRight, BookmarkCheck, BookmarkOff, MailCheckIcon, MailOpenIcon } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { useLocation, useNavigate, useParams } from "react-router"
 import { toast } from "sonner"
 import AppNav from "~/components/app-nav"
 import { Button, buttonVariants } from "~/components/ui/button"
 import { Separator } from "~/components/ui/separator"
-import type { Entry, EntryFilter, EntryStatus } from "~/lib/miniflux/client"
+import type { Entry, EntryFilter } from "~/lib/miniflux/client"
 import { useMiniflux } from "~/lib/miniflux/context"
 
 type EntryFromRouteState = {
@@ -148,7 +148,6 @@ function EntryPage() {
 
   const toggleBookmarkStatusMutation = useMutation({
     mutationFn: async (entry: Entry) => {
-      client?.toggleEntryBookmark
       await client?.toggleEntryBookmark(entry.id)
     },
     onSuccess: async () => {
