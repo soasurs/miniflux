@@ -86,13 +86,7 @@ function FeedCard(props: { feed: Feed, reads: number, unreads: number }) {
         <Button
           type="button"
           variant="outline"
-          onClick={() => {
-            navigate(`/feeds/${props.feed.id}`, {
-              state: {
-                feed: props.feed
-              }
-            })
-          }}
+          onClick={() => navigate(`/feeds/${props.feed.id}`)}
         >
           <EditIcon />Edit
         </Button>

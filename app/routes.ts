@@ -7,6 +7,8 @@ export default [
   route("history", "pages/history/history.tsx"),
   route("feeds/:feedId", "pages/edit-feed/edit-feed.tsx"),
   route("feeds", "pages/feeds/feeds.tsx"),
+  route("categories/:categoryId/entries", "pages/categories/entries.tsx"),
+  route("categories/:categoryId/feeds", "pages/categories/feeds.tsx"),
   route("categories", "pages/categories/categories.tsx"),
   route("login", "pages/login/login.tsx")
 ] satisfies RouteConfig;

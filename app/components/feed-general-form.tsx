@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card"
 import { Field, FieldGroup, FieldLabel } from "./ui/field"
 import { useQuery } from "@tanstack/react-query"
 import { Select, SelectValue, SelectTrigger, SelectContent, SelectGroup, SelectLabel, SelectItem } from "./ui/select"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Input } from "./ui/input"
 import { Checkbox } from "./ui/checkbox"
 import { Button } from "./ui/button"
@@ -17,11 +17,16 @@ const formSchema = z.object({
   category: z
     .number(),
   title: z
-    .string(),
+    .string()
+    .min(1, "Title is required."),
   site_url: z
-    .string(),
+    .string()
+    .min(1, "Site URL is required.")
+    .url("Must be a valid URL."),
   feed_url: z
-    .string(),
+    .string()
+    .min(1, "Feed URL is required.")
+    .url("Must be a valid URL."),
   do_not_refresh: z
     .boolean()
 })
@@ -29,6 +34,7 @@ const formSchema = z.object({
 function FeedGeneralForm(props: { feed: Feed }) {
   const categoriesQueryKey = ['categories']
   const { client, ready } = useMiniflux()
+  const [serverError, setServerError] = useState<string | null>(null)
   const { status, error, data: categories } = useQuery({
     queryKey: categoriesQueryKey,
     queryFn: async () => {
@@ -57,13 +63,22 @@ function FeedGeneralForm(props: { feed: Feed }) {
       onSubmit: formSchema,
     },
     onSubmit: async ({ value }) => {
-      await client?.updateFeed(props.feed.id, {
+      setServerError(null)
+      const result = await client?.updateFeed(props.feed.id, {
         category_id: value.category,
         title: value.title,
         site_url: value.site_url,
         feed_url: value.feed_url,
         disabled: value.do_not_refresh
       })
+      if (!result) {
+        setServerError("Unable to connect to server.")
+        return
+      }
+      if (!result.ok) {
+        setServerError(result.error.error_message)
+        return
+      }
       toast.success("Update feed successfully", { position: "top-right" })
     }
   })
@@ -221,7 +236,10 @@ function FeedGeneralForm(props: { feed: Feed }) {
           </FieldGroup>
         </form>
       </CardContent>
-      <CardFooter className="flex">
+      <CardFooter className="flex flex-col items-start gap-3">
+        {serverError && (
+          <p className="text-sm text-destructive">{serverError}</p>
+        )}
         <Field>
           <form.Subscribe selector={(state) => state.isSubmitting}>
             {(isSubmitting) => (

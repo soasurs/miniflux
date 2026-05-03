@@ -9,6 +9,7 @@ import {
 
 import type { Route } from "./+types/root";
 import { MinifluxProvider } from "~/lib/miniflux/context";
+import { ThemeProvider } from "next-themes";
 import "./app.css";
 import { Toaster } from "./components/ui/sonner";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -17,7 +18,7 @@ const queryClient = new QueryClient()
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -25,7 +26,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
         <ScrollRestoration />
         <Scripts />
         <Toaster />

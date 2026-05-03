@@ -1,137 +1,21 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, useRef } from "react"
-import { Link } from "react-router"
-import AppNav from "~/components/app-nav"
-import EntryCard from "~/components/entry"
-import { buttonVariants } from "~/components/ui/button"
-import type { EntryFilter } from "~/lib/miniflux/client"
-import { useMiniflux } from "~/lib/miniflux/context"
+import { EntryList } from "~/components/entry-list"
 
-export function Home() {
-  const pageSize = 20
-  const queryKey = ['unreads']
-  const { client, ready } = useMiniflux()
-  const {
-    status,
-    error,
-    data,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: queryKey,
-    queryFn: async ({ pageParam }) => {
-      const params: EntryFilter = {
-        status: 'unread',
-        limit: pageSize,
-        direction: 'desc',
-        order: 'published_at',
-        offset: pageParam
-      }
-      return await client?.getEntries(params)
-    },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => {
-      if (!lastPage) return undefined
-      if (!lastPage.ok) return undefined
-
-      const entries = lastPage.data.entries
-      if (!entries || entries.length === 0) return undefined
-
-      return entries.length + pageSize
-    },
-    enabled: !!client && ready
-  })
-
-  const allEntries = useMemo(() => {
-    return data?.pages.flatMap(page =>
-      (page && page.ok) ? page.data.entries : []
-    ) ?? [];
-  }, [data?.pages])
-
-  const loadMoreRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage()
-      }
-    }, {
-      threshold: 0.1,
-      rootMargin: '150px 0px'
-    })
-
-    const currentRef = loadMoreRef.current
-    if (currentRef) observer.observe(currentRef)
-
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef)
-      }
-    }
-  })
-
+function Home() {
   return (
-    <div className="pb-8 md:pb-10">
-      <AppNav containerClassName="max-w-4xl" />
-      <main className="mx-auto max-w-4xl px-4 py-6 md:py-8">
-        <header className="mb-6 space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Home</h1>
-          <p className="text-sm text-muted-foreground">All unread entries across your subscriptions.</p>
-        </header>
-        {status === 'pending'
-          ? <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
-            Loading entries...
-          </div>
-          : !client ? (
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <h2 className="text-lg font-semibold">Sign in to view your entries</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Connect your Miniflux account first, then your feeds will appear here.
-              </p>
-              <Link to="/login" className={`${buttonVariants({ variant: "outline" })} mt-4`}>
-                Go to login
-              </Link>
-            </div>
-          ) : error || !data ? (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-foreground">Unable to load entries</h2>
-              <p className="mt-2 text-sm text-destructive">{error.message}</p>
-            </div>
-          ) : data.pages.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center shadow-sm">
-              <h2 className="text-lg font-semibold">No bookmarks</h2>
-              <p className="mt-2 text-sm text-muted-foreground">Add more entries to bookmark!</p>
-            </div>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {allEntries.map((entry, index) => {
-                return <EntryCard
-                  key={entry.id}
-                  entry={entry}
-                  parent="unreads"
-                  prevEntryId={allEntries[index - 1]?.id}
-                  nextEntryId={allEntries[index + 1]?.id}
-                />
-              })}
-            </ul>
-          )
-        }
-        <div className="pt-4 space-y-2">
-          <div ref={loadMoreRef} className="h-1">
-            {isFetchingNextPage &&
-              <div className="text-center text-sm text-muted-foreground animate-pulse">
-                Loading more...
-              </div>
-            }
-            {!hasNextPage &&
-              <div className="text-center text-sm text-muted-foreground">
-                Nothing more to load
-              </div>
-            }
-          </div>
-        </div>
-      </main>
-    </div>
+    <EntryList
+      queryKey={["unreads"]}
+      title="Home"
+      subtitle="All unread entries across your subscriptions."
+      emptyTitle="No unread entries"
+      emptySubtitle="Subscribe to more feeds to see entries here."
+      parent="unreads"
+      buildFilter={(cursor) => ({
+        status: "unread",
+        direction: "desc",
+        order: "published_at",
+        ...(cursor > 0 ? { before_entry_id: cursor } : {}),
+      })}
+    />
   )
 }
 

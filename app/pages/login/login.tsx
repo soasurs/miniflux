@@ -53,7 +53,7 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen justify-center items-center bg-slate-100">
+    <div className="flex min-h-screen justify-center items-center bg-muted">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Login to your account</CardTitle>
@@ -102,7 +102,7 @@ function Login() {
           </form>
         </CardContent>
         <CardFooter className="flex-col gap-2">
-          {error && <p className="text-sm text-red-500 w-full">{error}</p>}
+          {error && <p className="text-sm text-destructive w-full">{error}</p>}
           <Button type="submit" form="login-form" className="w-full" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </Button>

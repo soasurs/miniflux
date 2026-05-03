@@ -28,19 +28,16 @@ function CategoryCard(props: { category: Category }) {
   return (
     <li className="flex flex-col rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-muted/35 gap-2">
       <div className="flex gap-4 items-center">
-        <a>{props.category.title}</a>
+        <span className="text-lg font-semibold">{props.category.title}</span>
         <span>({props.category.total_unread})</span>
       </div>
       <div className="flex gap-4">
-        <Link to='' className="hover:underline">Entries</Link>
-        <Link to='' className="hover:underline">Feeds</Link>
-        <Link to='#' className="hover:underline">Edit</Link>
-        <a 
-          href='#' 
+        <Link to={`/categories/${props.category.id}/entries`} className="hover:underline">Entries</Link>
+        <Link to={`/categories/${props.category.id}/feeds`} className="hover:underline">Feeds</Link>
+        <a
+          href='#'
           className="hover:underline"
-          onClick={() => {
-            markAllReadMutation.mutate()
-          }}
+          onClick={() => markAllReadMutation.mutate()}
         >
           Mark all as read
         </a>
